@@ -6,14 +6,13 @@
  * 显存带宽 = 数据量 / 耗时
  * 
  * @author chenyang li
- *
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime.h>
 #include <time.h>
 
-#define DATA_SIZE 1024*1024
+#define DATA_SIZE 1024 * 1024
 
 void printDeviceProps(const cudaDeviceProp *prop);
 

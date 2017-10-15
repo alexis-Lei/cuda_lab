@@ -1,20 +1,17 @@
 /*
- * cuda_sample_3.cu 初步并行化数组元素平方和计算
- * 每个线程负责累加数组中的一部分连续的元素
- *
- * @author chenyang li
- */
+* cuda_sample_4.cu 进一步并行化数组元素平方和计算
+* 改进显存中元素的存取模式（跳跃存取 -> 连续存取）
+*
+* @author chenyang li
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime.h>
-// 包含 threadIdx
 #include <device_launch_parameters.h>
 #include <time.h>
 
 #define DATA_SIZE 1024 * 1024
-
-// 线程数
-#define THREAD_NUM 256
+#define THREAD_NUM 216
 
 int data[DATA_SIZE];
 int clockRate;
@@ -83,22 +80,18 @@ __global__ static void sumOfSquares(int *numbers, int *sub_sum, clock_t *time) {
     int i;
     clock_t start, end;
 
-    // 获取当前线程Id（从0开始）
     const int thread_id = threadIdx.x;
-    // 每个线程累加元素的个数
-    const int size = DATA_SIZE / THREAD_NUM;
 
-    // 记录线程0的起始时间
     if (thread_id == 0) {
         start = clock();
     }
 
     sub_sum[thread_id] = 0;
-    for (i = thread_id * size; i < (thread_id + 1) * size; i++) {
+    // 线程0获取第0个元素，线程1获取第1个元素，以此类推... 
+    for (i = thread_id; i < DATA_SIZE; i += THREAD_NUM) {
         sub_sum[thread_id] += numbers[i] * numbers[i];
     }
 
-    // 记录线程0的结束时间
     if (thread_id == 0) {
         end = clock();
         *time = end - start;
@@ -118,17 +111,14 @@ int main(void) {
     generateNumbers(data, DATA_SIZE);
 
     cudaMalloc((void**)&gpudata, sizeof(int) * DATA_SIZE);
-    // 使用长度为THREAD_NUM的数组来记录每个线程计算的结果
     cudaMalloc((void**)&gpu_sub_sum, sizeof(int) * THREAD_NUM);
     cudaMalloc((void**)&gpu_time_used, sizeof(clock_t));
 
     cudaMemcpy(gpudata, data, sizeof(int) * DATA_SIZE, cudaMemcpyHostToDevice);
 
-    // 更新线程数量
     sumOfSquares << < 1, THREAD_NUM, 0 >> > (gpudata, gpu_sub_sum, gpu_time_used);
 
     cudaMemcpy(&time_used, gpu_time_used, sizeof(clock_t), cudaMemcpyDeviceToHost);
-    // 将显存中的数组拷贝至主内存中
     cudaMemcpy(sub_sum, gpu_sub_sum, sizeof(int) * THREAD_NUM, cudaMemcpyDeviceToHost);
 
     sum = 0;
@@ -137,7 +127,6 @@ int main(void) {
     }
 
     cudaFree(gpudata);
-    // 释放显存中的数组
     cudaFree(gpu_sub_sum);
     cudaFree(time);
 

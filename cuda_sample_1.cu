@@ -4,7 +4,6 @@
  * cuda_sample_1.cu 仅实现在GPU上的计算，暂未涉及并行.
  *
  * @author chenyang li
- *
  */
 #include <stdio.h>
 #include <stdlib.h>

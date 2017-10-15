@@ -1,20 +1,18 @@
 /*
- * cuda_sample_3.cu 初步并行化数组元素平方和计算
- * 每个线程负责累加数组中的一部分连续的元素
- *
- * @author chenyang li
- */
+* cuda_sample_5.cu 在改进存取模式的基础上，利用Block增加线程数量，进一步优化数组元素平方和计算
+*
+* @author chenyang li
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime.h>
-// 包含 threadIdx
 #include <device_launch_parameters.h>
 #include <time.h>
 
 #define DATA_SIZE 1024 * 1024
-
-// 线程数
-#define THREAD_NUM 256
+#define THREAD_NUM 216
+// Block数量
+#define BLOCK_NUM 32
 
 int data[DATA_SIZE];
 int clockRate;
@@ -78,30 +76,40 @@ bool initCUDA() {
     return true;
 }
 
+/* 寻找耗时最大的元素 */
+clock_t findMaxTime(clock_t *time, int size) {
+    int i;
+    clock_t max = time[0];
+    for (i = 0; i < size; i++) {
+        if (time[i] > max) {
+            max = time[i];
+        }
+    }
+    return max;
+}
+
 /* 计算平方和（__global__函数运行于GPU）*/
 __global__ static void sumOfSquares(int *numbers, int *sub_sum, clock_t *time) {
     int i;
     clock_t start, end;
 
-    // 获取当前线程Id（从0开始）
+    // 获取当前线程所属的Block号（从0开始）
+    const int block_id = blockIdx.x;
     const int thread_id = threadIdx.x;
-    // 每个线程累加元素的个数
-    const int size = DATA_SIZE / THREAD_NUM;
 
-    // 记录线程0的起始时间
     if (thread_id == 0) {
         start = clock();
     }
 
-    sub_sum[thread_id] = 0;
-    for (i = thread_id * size; i < (thread_id + 1) * size; i++) {
-        sub_sum[thread_id] += numbers[i] * numbers[i];
+    sub_sum[block_id * THREAD_NUM + thread_id] = 0;
+    // Block0-线程0获取第0个元素，Block0-线程1获取第1个元素...Block1-线程0获取第THREAD_NUM个元素，以此类推... 
+    for (i = block_id * THREAD_NUM + thread_id; i < DATA_SIZE; i += BLOCK_NUM * THREAD_NUM) {
+        sub_sum[block_id * THREAD_NUM + thread_id] += numbers[i] * numbers[i];
     }
 
-    // 记录线程0的结束时间
     if (thread_id == 0) {
         end = clock();
-        *time = end - start;
+        time[block_id] = end - start;
     }
 }
 
@@ -112,43 +120,43 @@ int main(void) {
 
     int *gpudata;
     int i, sum;
-    int sub_sum[THREAD_NUM], *gpu_sub_sum;
-    clock_t time_used, *gpu_time_used;
+    int sub_sum[BLOCK_NUM * THREAD_NUM], *gpu_sub_sum;
+    // 每个Block设置一个计时单元
+    clock_t time_used[BLOCK_NUM], *gpu_time_used;
 
     generateNumbers(data, DATA_SIZE);
 
     cudaMalloc((void**)&gpudata, sizeof(int) * DATA_SIZE);
-    // 使用长度为THREAD_NUM的数组来记录每个线程计算的结果
-    cudaMalloc((void**)&gpu_sub_sum, sizeof(int) * THREAD_NUM);
-    cudaMalloc((void**)&gpu_time_used, sizeof(clock_t));
+    // 当前一共有BLOCK_NUM * THREAD_NUM个线程
+    cudaMalloc((void**)&gpu_sub_sum, sizeof(int) * BLOCK_NUM * THREAD_NUM);
+    cudaMalloc((void**)&gpu_time_used, sizeof(clock_t) * BLOCK_NUM);
 
     cudaMemcpy(gpudata, data, sizeof(int) * DATA_SIZE, cudaMemcpyHostToDevice);
 
-    // 更新线程数量
-    sumOfSquares << < 1, THREAD_NUM, 0 >> > (gpudata, gpu_sub_sum, gpu_time_used);
+    // 更新Block数
+    sumOfSquares << < BLOCK_NUM, THREAD_NUM, 0 >> > (gpudata, gpu_sub_sum, gpu_time_used);
 
-    cudaMemcpy(&time_used, gpu_time_used, sizeof(clock_t), cudaMemcpyDeviceToHost);
-    // 将显存中的数组拷贝至主内存中
-    cudaMemcpy(sub_sum, gpu_sub_sum, sizeof(int) * THREAD_NUM, cudaMemcpyDeviceToHost);
+    cudaMemcpy(time_used, gpu_time_used, sizeof(clock_t) * BLOCK_NUM, cudaMemcpyDeviceToHost);
+    cudaMemcpy(sub_sum, gpu_sub_sum, sizeof(int) * BLOCK_NUM * THREAD_NUM, cudaMemcpyDeviceToHost);
 
     sum = 0;
-    for (i = 0; i < THREAD_NUM; i++) {
+    for (i = 0; i < BLOCK_NUM * THREAD_NUM; i++) {
         sum += sub_sum[i];
     }
 
     cudaFree(gpudata);
-    // 释放显存中的数组
     cudaFree(gpu_sub_sum);
     cudaFree(time);
 
-    printf("\nGPU sum is: %d, time used: %f (s)\n", sum, (float)time_used / (clockRate * 1000));
+    clock_t max_time_used = findMaxTime(time_used, BLOCK_NUM);
+    printf("\nGPU sum is: %d, time used: %f (s)\n", sum, (float)max_time_used / (clockRate * 1000));
 
     sum = 0;
     for (i = 0; i < DATA_SIZE; i++) {
         sum += data[i] * data[i];
     }
     printf("CPU sum is: %d\n", sum);
-    printf("Memory bandwidth: %f (MB/s)\n", ((float)(DATA_SIZE * sizeof(int) / 1024 / 1024)) / ((float)time_used / (clockRate * 1000)));
+    printf("Memory bandwidth: %f (MB/s)\n", ((float)(DATA_SIZE * sizeof(int) / 1024 / 1024)) / ((float)max_time_used / (clockRate * 1000)));
 
     system("pause");
 
