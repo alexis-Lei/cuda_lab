@@ -1,5 +1,5 @@
 /*
- * cuda_sample_7.cu ÀûÓÃÊ÷×´¼Ó·¨£¬ÊµÏÖ¼Ó·¨²¢ÐÐ»¯
+ * cuda_sample_7.cu ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´ï¿½Ó·ï¿½ï¿½ï¿½Êµï¿½Ö¼Ó·ï¿½ï¿½ï¿½ï¿½Ð»ï¿½
  *
  * @author chenyang li
  */
@@ -17,7 +17,7 @@
 int data[DATA_SIZE];
 int clockRate;
 
-/* ²úÉú0-9Ö®¼äµÄËæ»úÊý */
+/* ï¿½ï¿½ï¿½ï¿½0-9Ö®ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
 void generateNumbers(int *numbers, int size) {
     int i;
     for (i = 0; i < size; i++) {
@@ -25,7 +25,7 @@ void generateNumbers(int *numbers, int size) {
     }
 }
 
-/* ´òÓ¡GPUÉè±¸ÐÅÏ¢ */
+/* æ‰“å°GPUè®¾å¤‡ä¿¡æ¯ */
 void printDeviceProps(const cudaDeviceProp *prop) {
     printf("Device Name: %s\n", prop->name);
     printf("totalGlobalMem: %ld\n", prop->totalGlobalMem);
@@ -44,7 +44,7 @@ void printDeviceProps(const cudaDeviceProp *prop) {
     printf("multiProcessorCount: %d\n", prop->multiProcessorCount);
 }
 
-/* CUDA ³õÊ¼»¯ */
+/* CUDA ï¿½ï¿½Ê¼ï¿½ï¿½ */
 bool initCUDA() {
     int count, i;
     cudaDeviceProp prop;
@@ -76,7 +76,7 @@ bool initCUDA() {
     return true;
 }
 
-/* Ñ°ÕÒºÄÊ±×î´óµÄÔªËØ */
+/* Ñ°ï¿½Òºï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôªï¿½ï¿½ */
 clock_t findMaxTime(clock_t *time, int size) {
     int i;
     clock_t max = time[0];
@@ -88,7 +88,7 @@ clock_t findMaxTime(clock_t *time, int size) {
     return max;
 }
 
-/* ¼ÆËãÆ½·½ºÍ£¨__global__º¯ÊýÔËÐÐÓÚGPU£©*/
+/* ï¿½ï¿½ï¿½ï¿½Æ½ï¿½ï¿½ï¿½Í£ï¿½__global__ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½GPUï¿½ï¿½*/
 __global__ static void sumOfSquares(int *numbers, int *sub_sum, clock_t *time) {
     int i;
     clock_t start, end;
@@ -97,7 +97,7 @@ __global__ static void sumOfSquares(int *numbers, int *sub_sum, clock_t *time) {
 
     const int block_id = blockIdx.x;
     const int thread_id = threadIdx.x;
-    // ¶¨Òå²½³¤ºÍ¼ÆËãÑÚÂë
+    // ï¿½ï¿½ï¿½å²½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     int offset, mask;
 
     if (thread_id == 0) {
@@ -116,17 +116,17 @@ __global__ static void sumOfSquares(int *numbers, int *sub_sum, clock_t *time) {
 
     __syncthreads();
 
-    /* ²¢ÐÐ¼Ó·¨´úÂë¶Î */
+    /* ï¿½ï¿½ï¿½Ð¼Ó·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
     offset = 1;
     mask = 1;
     while (offset < THREAD_NUM) {
-        // ×¢Òâ & µÄÓÅÏÈ¼¶Ð¡ÓÚ ==
+        // ×¢ï¿½ï¿½ & ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½Ð¡ï¿½ï¿½ ==
         if ((thread_id & mask) == 0 && thread_id + offset < THREAD_NUM) {
             shared[thread_id] += shared[thread_id + offset];
         }
         offset += offset;
         mask += offset;
-        // Ã¿µü´úÒ»ÂÖÐèÒªËùÓÐÏß³Ì½øÐÐÒ»´ÎÍ¬²½
+        // Ã¿ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Í¬ï¿½ï¿½
         __syncthreads();
     }
 
