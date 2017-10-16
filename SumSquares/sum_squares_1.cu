@@ -1,7 +1,7 @@
 /*
  * 计算数组元素平方和
  * 
- * cuda_sample_1.cu 仅实现在GPU上的计算，暂未涉及并行.
+ * sum_squares_1.cu 仅实现在GPU上的计算，暂未涉及并行.
  *
  * @author chenyang li
  */
@@ -22,7 +22,7 @@ void generateNumbers(int *numbers, int size) {
     }
 }
 
-/* CUDA 初始化 */
+/* CUDA初始化 */
 bool initCUDA() {
     int count, i;
     // 取得支持CUDA的装置的数目

@@ -1,9 +1,9 @@
 /*
-* cuda_sample_4.cu 进一步并行化数组元素平方和计算
-* 改进显存中元素的存取模式（跳跃存取 -> 连续存取）
-*
-* @author chenyang li
-*/
+ * sum_squares_4.cu 进一步并行化数组元素平方和计算
+ * 改进显存中元素的存取模式（跳跃存取 -> 连续存取）
+ *
+ * @author chenyang li
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime.h>

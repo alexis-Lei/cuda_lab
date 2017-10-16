@@ -1,5 +1,5 @@
 /*
- * cuda_sample_6.cu 利用Block共享内存，实现显存中Block内线程计算结果的累加，降低CPU的计算次数
+ * sum_squares_6.cu 利用Block共享内存，实现显存中Block内线程计算结果的累加，降低CPU的计算次数
  *
  * @author chenyang li
  */

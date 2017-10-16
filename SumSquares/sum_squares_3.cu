@@ -1,5 +1,5 @@
 /*
- * cuda_sample_3.cu 初步并行化数组元素平方和计算
+ * sum_squares_3.cu 初步并行化数组元素平方和计算
  * 每个线程负责累加数组中的一部分连续的元素
  *
  * @author chenyang li

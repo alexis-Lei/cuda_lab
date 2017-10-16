@@ -1,8 +1,8 @@
 /*
-* cuda_sample_5.cu 在改进存取模式的基础上，利用Block增加线程数量，进一步优化数组元素平方和计算
-*
-* @author chenyang li
-*/
+ * sum_squares_5.cu 在改进存取模式的基础上，利用Block增加线程数量，进一步优化数组元素平方和计算
+ *
+ * @author chenyang li
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime.h>
