@@ -36,6 +36,7 @@ bool initCUDA() {
     for (i = 0; i < count; i++) {
         cudaDeviceProp prop;
         if (cudaGetDeviceProperties(&prop, i) == cudaSuccess) {
+            printf("major = %d, minor = %d\n", prop.major, prop.minor);
             if (prop.major >= 1) {
                 break;
             }

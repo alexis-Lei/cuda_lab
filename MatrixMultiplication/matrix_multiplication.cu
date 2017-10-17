@@ -18,7 +18,6 @@
 // 将数组定义为全局，避免在栈内分配大块内存
 float A[MATRIX_SIZE*MATRIX_SIZE], B[MATRIX_SIZE * MATRIX_SIZE], C[MATRIX_SIZE * MATRIX_SIZE];
 float *gpu_A, *gpu_B, *gpu_C;
-int clockRate;
 
 /* 打印GPU设备信息 */
 void printDeviceProps(const cudaDeviceProp *prop) {
@@ -33,7 +32,7 @@ void printDeviceProps(const cudaDeviceProp *prop) {
     printf("maxGridSize[0-2]: %d %d %d\n", prop->maxGridSize[0], prop->maxGridSize[1], prop->maxGridSize[2]);
     printf("totalConstMem: %d\n", prop->totalConstMem);
     printf("major: %d & minor: %d\n", prop->major, prop->minor);
-    printf("clockRate: %d\n", prop->clockRate); clockRate = prop->clockRate;
+    printf("clockRate: %d\n", prop->clockRate);
     printf("textureAlignment: %d\n", prop->textureAlignment);
     printf("deviceOverlap: %d\n", prop->deviceOverlap);
     printf("multiProcessorCount: %d\n", prop->multiProcessorCount);
@@ -148,15 +147,17 @@ int main(void) {
     // 将数组从显存拷贝至主内存
     cudaMemcpy(C, gpu_C, sizeof(float) * MATRIX_SIZE * MATRIX_SIZE, cudaMemcpyDeviceToHost);
 
-    // 释放显存空间
+    /* 释放显存空间 */
     cudaFree(gpu_A);
     cudaFree(gpu_B);
     cudaFree(gpu_C);
 
     /* Optional */
-    //printMatrix(A, MATRIX_SIZE);
-    //printMatrix(B, MATRIX_SIZE);
-    //printMatrix(C, MATRIX_SIZE);
+    // printMatrix(A, MATRIX_SIZE);
+    // printMatrix(B, MATRIX_SIZE);
+    // printMatrix(C, MATRIX_SIZE);
 
     system("pause");
+
+    // return 0;
 }

@@ -11,7 +11,7 @@
 #include <time.h>
 
 #define DATA_SIZE 1024 * 1024
-#define THREAD_NUM 216
+#define THREAD_NUM 256
 #define BLOCK_NUM 32
 
 int data[DATA_SIZE];
@@ -76,22 +76,25 @@ bool initCUDA() {
     return true;
 }
 
-/* 寻找耗时最大的元素 */
-clock_t findMaxTime(clock_t *time, int size) {
+/* 计算最大耗时 */
+clock_t findMaxTimeUsed(const clock_t *time) {
     int i;
-    clock_t max = time[0];
-    for (i = 0; i < size; i++) {
-        if (time[i] > max) {
-            max = time[i];
+    clock_t min_start = time[0], max_end = time[BLOCK_NUM];
+    for (i = 0; i < BLOCK_NUM; i++) {
+        if (time[i] < min_start) {
+            min_start = time[i];
+        }
+        if (time[i + BLOCK_NUM] > max_end) {
+            max_end = time[i + BLOCK_NUM];
         }
     }
-    return max;
+
+    return max_end - min_start;
 }
 
 /* 计算平方和（__global__函数运行于GPU）*/
 __global__ static void sumOfSquares(int *numbers, int *sub_sum, clock_t *time) {
     int i;
-    clock_t start, end;
 
     // 声明共享内存区域，用于存储每个Block中线程计算结果的累加和
     extern __shared__ int shared[];
@@ -100,7 +103,7 @@ __global__ static void sumOfSquares(int *numbers, int *sub_sum, clock_t *time) {
     const int thread_id = threadIdx.x;
 
     if (thread_id == 0) {
-        start = clock();
+        time[block_id] = clock();
     }
 
     shared[thread_id] = 0;
@@ -110,8 +113,7 @@ __global__ static void sumOfSquares(int *numbers, int *sub_sum, clock_t *time) {
     }
 
     if (thread_id == 0) {
-        end = clock();
-        time[block_id] = end - start;
+        time[block_id + BLOCK_NUM] = clock();
     }
 
     // 线程同步，所有线程需要执行到此处方可继续向下执行
@@ -135,21 +137,21 @@ int main(void) {
     int *gpudata;
     int i, sum;
     int sub_sum[BLOCK_NUM], *gpu_sub_sum;
-    clock_t time_used[BLOCK_NUM], *gpu_time_used;
+    clock_t time_used[BLOCK_NUM * 2], *gpu_time_used;
 
     generateNumbers(data, DATA_SIZE);
 
     cudaMalloc((void**)&gpudata, sizeof(int) * DATA_SIZE);
     // CPU累加元素的数量降低至BLOCK_SIZE
     cudaMalloc((void**)&gpu_sub_sum, sizeof(int) * BLOCK_NUM);
-    cudaMalloc((void**)&gpu_time_used, sizeof(clock_t) * BLOCK_NUM);
+    cudaMalloc((void**)&gpu_time_used, sizeof(clock_t) * BLOCK_NUM * 2);
 
     cudaMemcpy(gpudata, data, sizeof(int) * DATA_SIZE, cudaMemcpyHostToDevice);
 
     // 更新共享内存的大小
     sumOfSquares << < BLOCK_NUM, THREAD_NUM, sizeof(int) * THREAD_NUM >> > (gpudata, gpu_sub_sum, gpu_time_used);
 
-    cudaMemcpy(time_used, gpu_time_used, sizeof(clock_t) * BLOCK_NUM, cudaMemcpyDeviceToHost);
+    cudaMemcpy(time_used, gpu_time_used, sizeof(clock_t) * BLOCK_NUM * 2, cudaMemcpyDeviceToHost);
     cudaMemcpy(sub_sum, gpu_sub_sum, sizeof(int) * BLOCK_NUM, cudaMemcpyDeviceToHost);
 
     // 累加各个Block的计算结果
@@ -162,7 +164,7 @@ int main(void) {
     cudaFree(gpu_sub_sum);
     cudaFree(time);
 
-    clock_t max_time_used = findMaxTime(time_used, BLOCK_NUM);
+    clock_t max_time_used = findMaxTimeUsed(time_used);
     printf("\nGPU sum is: %d, time used: %f (s)\n", sum, (float)max_time_used / (clockRate * 1000));
 
     sum = 0;

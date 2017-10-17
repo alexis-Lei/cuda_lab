@@ -11,7 +11,7 @@
 #include <time.h>
 
 #define DATA_SIZE 1024 * 1024
-#define THREAD_NUM 216
+#define THREAD_NUM 256
 
 int data[DATA_SIZE];
 int clockRate;
